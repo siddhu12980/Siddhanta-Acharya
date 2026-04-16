@@ -1,0 +1,88 @@
+---
+slug: redis-queue
+title: "Redis Job Queue"
+tagline: "Distributed job queue with pub/sub workers"
+category: "Distributed Systems"
+status: "live"
+repo: "https://github.com/siddhu12980/Redis-based-Job-Queue-System"
+liveUrl: null
+stack:
+  - "TypeScript"
+  - "Redis"
+  - "Express"
+  - "Node.js"
+order: 1
+architecture:
+  nodes:
+    - { id: "client", label: "Client", sub: "HTTP", type: "external", x: 50, y: 180 }
+    - { id: "master", label: "Master API", sub: "Express :3000", type: "service", x: 280, y: 180 }
+    - { id: "redis", label: "Redis", sub: "Lists + Pub/Sub", type: "datastore", x: 540, y: 180 }
+    - { id: "worker", label: "Worker", sub: "Node.js + exec", type: "service", x: 540, y: 360 }
+  edges:
+    - { id: "e1", from: "client", to: "master", label: "POST /submit" }
+    - { id: "e2", from: "master", to: "redis", label: "LPUSH \"problems\"" }
+    - { id: "e3", from: "redis", to: "worker", label: "BRPOP \"problems\"" }
+    - { id: "e4", from: "worker", to: "redis", label: "LPUSH results + PUBLISH" }
+simulation:
+  buttonLabel: "Submit code"
+  counterPrefix: "p"
+  totalDuration: 3500
+  steps:
+    - delay: 0
+      pulseNode: "client"
+      log: "[00:00.00] [client] POST /submit { problemId: \"{id}\", code: \"print('hello')\", language: \"python\" }"
+    - delay: 400
+      edgeId: "e1"
+      pulseNode: "master"
+      log: "[00:00.12] [master] received submission {id}, pushing to queue"
+    - delay: 900
+      edgeId: "e2"
+      pulseNode: "redis"
+      log: "[00:00.18] [redis] LPUSH \"problems\" → queue length: 1"
+    - delay: 1400
+      edgeId: "e3"
+      pulseNode: "worker"
+      log: "[00:00.24] [worker] BRPOP \"problems\" → processing {id} (python)"
+    - delay: 2100
+      log: "[00:00.31] [worker] exec: python3 -c \"print('hello')\" → stdout: \"hello\""
+    - delay: 2800
+      edgeId: "e4"
+      pulseNode: "redis"
+      log: "[00:00.38] [worker] LPUSH \"results:{id}\" + PUBLISH \"problem_done\""
+    - delay: 3200
+      log: "[00:00.40] [master] GET /result/{id} → [\"hello\"] (200 OK, 312ms)"
+---
+
+The Redis Job Queue started as a weekend experiment to understand how systems
+like Sidekiq and Bull work under the hood — but without reaching for any
+libraries. The entire queue is built on raw Redis primitives: `LPUSH` to
+enqueue, `BRPOP` to dequeue, and `PUBLISH`/`SUBSCRIBE` for real-time
+completion notifications.
+
+## What's interesting
+
+The system is a three-process architecture: an Express API server accepts job
+submissions via `POST /submit` and pushes them onto a Redis list called
+`"problems"`. A separate worker process runs an infinite `BRPOP` loop,
+blocking until a job arrives. When it picks one up, it shells out to
+`python3 -c` or `node -e` via `child_process.exec` to execute the submitted
+code, stores the output in `results:{problemId}`, and publishes a completion
+event on the `"problem_done"` channel.
+
+The `LPUSH`/`BRPOP` pair gives you FIFO ordering for free, and because
+`BRPOP` is atomic, you can run multiple worker instances without
+double-processing — Redis guarantees each job goes to exactly one consumer.
+
+## What I'd do differently
+
+The system is deliberately simple — no retry logic, no dead-letter queue, no
+job acknowledgment. If a worker crashes mid-execution, that job is gone. For
+a learning project that's fine, but production would need at least a
+visibility pattern like `RPOPLPUSH` into a processing list with heartbeat
+timeouts.
+
+The code execution via `exec()` is also a security concern — there's minimal
+input escaping and no sandbox. If I rebuilt it, I'd swap `child_process` for
+a proper isolate (like `isolated-vm`) and add execution timeouts. I'd also
+drop Express for something lighter like Hono — the API is two routes; it
+doesn't need middleware stacks.

@@ -1,26 +1,249 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
+/* ── Theme tokens ─────────────────────────────────────────────── */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Backgrounds */
+  --app-bg: oklch(0.985 0.002 260);
+  --app-panel: oklch(0.97 0.002 260);
+  --app-hover: oklch(0.94 0.004 260);
+  --app-rail: oklch(0.965 0.003 260);
+
+  /* Text */
+  --app-text: oklch(0.18 0.01 260);
+  --app-text-secondary: oklch(0.40 0.01 260);
+  --app-text-muted: oklch(0.55 0.01 260);
+
+  /* Borders */
+  --app-border: oklch(0.88 0.005 260);
+
+  /* Accent — cyan */
+  --app-accent: oklch(0.60 0.14 210);
+  --app-accent-hover: oklch(0.55 0.16 210);
+  --app-accent-muted: oklch(0.60 0.14 210 / 15%);
+
+  /* Solid surfaces */
+  --app-solid: oklch(0.20 0.01 260);
+  --app-solid-text: oklch(0.97 0.005 260);
+
+  /* Status */
+  --app-status-live: oklch(0.65 0.18 150);
+  --app-status-degraded: oklch(0.72 0.15 70);
+  --app-status-offline: oklch(0.55 0.01 260);
+
+  /* Architecture diagram nodes */
+  --app-node-service: oklch(0.60 0.14 210);
+  --app-node-datastore: oklch(0.65 0.15 150);
+  --app-node-external: oklch(0.60 0.10 280);
+
+  /* Selection */
+  --app-selection-bg: oklch(0.60 0.14 210 / 20%);
+  --app-selection-text: oklch(0.18 0.01 260);
+
+  /* Fonts */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
+
+.dark {
+  /* Backgrounds */
+  --app-bg: oklch(0.16 0.01 260);
+  --app-panel: oklch(0.19 0.012 260);
+  --app-hover: oklch(0.22 0.014 260);
+  --app-rail: oklch(0.14 0.01 260);
+
+  /* Text */
+  --app-text: oklch(0.93 0.005 260);
+  --app-text-secondary: oklch(0.68 0.01 260);
+  --app-text-muted: oklch(0.50 0.01 260);
+
+  /* Borders */
+  --app-border: oklch(1 0 0 / 8%);
+
+  /* Accent — cyan */
+  --app-accent: oklch(0.75 0.14 210);
+  --app-accent-hover: oklch(0.80 0.16 210);
+  --app-accent-muted: oklch(0.75 0.14 210 / 12%);
+
+  /* Solid */
+  --app-solid: oklch(0.92 0.005 260);
+  --app-solid-text: oklch(0.16 0.01 260);
+
+  /* Status */
+  --app-status-live: oklch(0.72 0.19 150);
+  --app-status-degraded: oklch(0.78 0.14 70);
+  --app-status-offline: oklch(0.45 0.01 260);
+
+  /* Node colors */
+  --app-node-service: oklch(0.75 0.14 210);
+  --app-node-datastore: oklch(0.72 0.17 150);
+  --app-node-external: oklch(0.70 0.10 280);
+
+  /* Selection */
+  --app-selection-bg: oklch(0.75 0.14 210 / 15%);
+  --app-selection-text: oklch(0.93 0.005 260);
+}
+
+/* ── Tailwind theme inline ─────────────────────────────────────── */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-app-bg: var(--app-bg);
+  --color-app-panel: var(--app-panel);
+  --color-app-hover: var(--app-hover);
+  --color-app-rail: var(--app-rail);
+
+  --color-app-text: var(--app-text);
+  --color-app-text-secondary: var(--app-text-secondary);
+  --color-app-text-muted: var(--app-text-muted);
+
+  --color-app-border: var(--app-border);
+
+  --color-app-accent: var(--app-accent);
+  --color-app-accent-hover: var(--app-accent-hover);
+  --color-app-accent-muted: var(--app-accent-muted);
+
+  --color-app-solid: var(--app-solid);
+  --color-app-solid-text: var(--app-solid-text);
+
+  --color-app-status-live: var(--app-status-live);
+  --color-app-status-degraded: var(--app-status-degraded);
+  --color-app-status-offline: var(--app-status-offline);
+
+  --color-app-node-service: var(--app-node-service);
+  --color-app-node-datastore: var(--app-node-datastore);
+  --color-app-node-external: var(--app-node-external);
+
+  --color-app-selection-bg: var(--app-selection-bg);
+  --color-app-selection-text: var(--app-selection-text);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ── Base ──────────────────────────────────────────────────────── */
+
+@layer base {
+  * {
+    @apply border-app-border;
+  }
+
+  body {
+    @apply bg-app-bg text-app-text;
+  }
+
+  html {
+    @apply font-sans;
+  }
+
+  ::selection {
+    background: var(--app-selection-bg);
+    color: var(--app-selection-text);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ── Hide scrollbar utility ────────────────────────────────────── */
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Background overlays ───────────────────────────────────────── */
+
+.bg-grid {
+  background-image:
+    linear-gradient(var(--app-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--app-border) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.bg-noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* ── Status dot breathing ──────────────────────────────────────── */
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.animate-breathe {
+  animation: breathe 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-breathe {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* ── Edge draw animation ───────────────────────────────────────── */
+
+@keyframes edge-draw {
+  from { stroke-dashoffset: var(--edge-length, 500); }
+  to { stroke-dashoffset: 0; }
+}
+
+/* ── Traveling dot ─────────────────────────────────────────────── */
+
+@keyframes travel-dot {
+  0% { offset-distance: 0%; }
+  100% { offset-distance: 100%; }
+}
+
+/* ── Node pulse ────────────────────────────────────────────────── */
+
+@keyframes node-pulse {
+  0% { box-shadow: 0 0 0 0 var(--pulse-color, var(--app-accent)); }
+  50% { box-shadow: 0 0 12px 4px var(--pulse-color, var(--app-accent)); }
+  100% { box-shadow: 0 0 0 0 var(--pulse-color, var(--app-accent)); }
+}
+
+.animate-node-pulse {
+  animation: node-pulse 0.6s ease-out;
+}
+
+/* ── Text stroke utility ───────────────────────────────────────── */
+
+.text-stroke {
+  -webkit-text-stroke: 1.5px var(--app-text);
+  color: transparent;
+}
+
+.dark .text-stroke {
+  -webkit-text-stroke-color: var(--app-text);
+}
+
+/* ── Scroll reveal ─────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-safe\:animate-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ── React Flow overrides ──────────────────────────────────────── */
+
+.react-flow__renderer {
+  background: transparent !important;
+}
+
+.react-flow__edge-path {
+  stroke: var(--app-border);
+  stroke-width: 1.5;
+}
+
+.react-flow__attribution {
+  display: none !important;
 }
