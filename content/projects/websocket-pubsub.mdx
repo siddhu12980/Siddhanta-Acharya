@@ -11,4 +11,79 @@ stack:
   - "WebSocket"
   - "Redis"
 order: 2
+architecture:
+  nodes:
+    - { id: "client", label: "Client", sub: "WebSocket", type: "external", x: 50, y: 180 }
+    - { id: "nginx", label: "Nginx LB", sub: "Round-robin", type: "service", x: 260, y: 180 }
+    - { id: "ws-server", label: "WS Server", sub: "Express + ws ×2", type: "service", x: 500, y: 180 }
+    - { id: "redis", label: "Redis", sub: "Pub/Sub broker", type: "datastore", x: 500, y: 360 }
+  edges:
+    - { id: "e1", from: "client", to: "nginx", label: "WS connect" }
+    - { id: "e2", from: "nginx", to: "ws-server", label: "Upgrade" }
+    - { id: "e3", from: "ws-server", to: "redis", label: "PUBLISH \"room1\"" }
+    - { id: "e4", from: "redis", to: "ws-server", label: "fan-out to subscribers" }
+simulation:
+  buttonLabel: "Send message"
+  counterPrefix: "u"
+  totalDuration: 3500
+  steps:
+    - delay: 0
+      pulseNode: "client"
+      log: "[00:00.00] [client] WS connect ws://localhost/ws/ → Upgrade request"
+    - delay: 400
+      edgeId: "e1"
+      pulseNode: "nginx"
+      log: "[00:00.12] [nginx] Upgrade OK → round-robin to websocket1:8081"
+    - delay: 900
+      edgeId: "e2"
+      pulseNode: "ws-server"
+      log: "[00:00.22] [ws-server] userId: {id} assigned → SUBSCRIBE \"room1\""
+    - delay: 1400
+      edgeId: "e3"
+      pulseNode: "redis"
+      log: "[00:00.30] [redis] SUBSCRIBE \"room1\" → active subscribers: 2"
+    - delay: 1900
+      pulseNode: "client"
+      log: "[00:00.38] [client] send: { content: \"Hello from {id}\" }"
+    - delay: 2500
+      edgeId: "e3"
+      pulseNode: "redis"
+      log: "[00:00.46] [ws-server] PUBLISH \"room1\" { type: \"chat\", sender: \"{id}\" }"
+    - delay: 3100
+      edgeId: "e4"
+      pulseNode: "ws-server"
+      log: "[00:00.52] [redis] fan-out → all room1 subscribers notified (2 servers)"
 ---
+
+The WebSocket Pub/Sub project demonstrates horizontal scaling of real-time
+messaging using Redis as a cross-instance message broker. The architecture is
+a five-service Docker Compose stack: two Express + `ws` server instances
+behind an nginx reverse proxy, sharing a single Redis instance for pub/sub
+communication.
+
+## What's interesting
+
+When a client connects, nginx round-robins the WebSocket upgrade to one of
+two server instances. Each server subscribes to a shared Redis channel
+(`"room1"`) using a singleton `RedisPubSubManager` that maintains dual Redis
+clients — one for `PUBLISH`, one for `SUBSCRIBE` (a node-redis v4
+requirement since a client in subscribe mode can't issue other commands).
+
+When any client sends a message, its server publishes to Redis, and Redis
+fans it out to all subscribers — including servers the sender isn't connected
+to. This is the same pattern Socket.IO uses with its Redis adapter, but
+built from raw `ws` and `redis` npm packages with no abstraction layer.
+
+The project also implements private messaging via per-user Redis channels:
+each connected user gets their own channel (keyed by UUID), so direct
+messages are delivered only to the server instance where the recipient is
+connected.
+
+## What I'd do differently
+
+The shared singleton `subClient` creates a cleanup bug — when any user
+disconnects and unsubscribes from `"room1"`, it unsubscribes the entire
+server instance. Production would need reference counting per channel. I'd
+also replace Redis Pub/Sub with Redis Streams for message persistence, so
+users who reconnect don't miss messages, and add proper authentication
+instead of auto-generated UUIDs.
