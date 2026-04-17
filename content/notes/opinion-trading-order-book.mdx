@@ -1,0 +1,47 @@
+---
+slug: opinion-trading-order-book
+title: "How I built a prediction market that creates its own liquidity"
+date: "2026-04-10"
+tags:
+  - trading
+  - go
+  - systems
+summary: "The hardest part of building a prediction market isn't the matching engine — it's what to do when there's no one on the other side."
+---
+
+When I built [Opinion Trading](/projects/opinion-trading), I modeled it after Probo. Users bet on real-world events by buying YES or NO outcome tokens. The price reflects the market's collective probability estimate — YES at ₹8 implies an 80% chance of the event occurring.
+
+The matching engine was straightforward to write. The interesting problem came up almost immediately: what happens when a user wants to buy YES but nobody is selling?
+
+## The liquidity problem
+
+In a stock exchange, if nobody is selling Apple at your price, your order sits in the book and waits. That works because Apple stock already exists — someone holds it and might eventually sell.
+
+Prediction markets are different. Tokens don't exist until someone creates them. There's no pre-existing supply. A new market starts with an empty order book on both sides, and the first traders have no counterparty.
+
+The naive solution is to reject unmatched orders. The market stays empty and nobody trades. That's not a market.
+
+## Inverse orders
+
+The fix I implemented: when a YES order arrives with no matching NO on the other side, the engine creates a synthetic inverse order on the NO side at the complementary price.
+
+```
+# User places:  BUY YES @ ₹850 (qty: 5)
+# Engine creates: BUY NO  @ ₹150 (qty: 5)
+```
+
+The two prices always sum to ₹1000 — the maximum payout per contract. When both orders are present, they match against each other. Both sides receive freshly minted tokens rather than transferring existing ones. The total locked capital is exactly ₹1000 per contract: ₹850 from the YES buyer, ₹150 from the NO buyer.
+
+The payout logic follows from this: if the event resolves YES, YES token holders receive ₹1000 each. NO token holders receive nothing. The positions are self-contained and the math is closed.
+
+## The request pipeline
+
+The matching engine is written in Go and runs separately from the API server. Orders arrive via an Express gateway that serializes each request and pushes it onto a Redis list. The Go engine pops from Redis via `BRPOP`, processes the order in a goroutine, and publishes the result back to a per-request pub/sub channel.
+
+This is synchronous RPC built on Redis. The gateway blocks waiting for a response on the unique channel, then returns it to the HTTP client. From the client's perspective it's a normal request/response. Under the hood, two different processes in two different languages are coordinating through Redis.
+
+## What I'd fix
+
+The engine stores all state in in-memory maps and spawns goroutines without mutex protection. Under concurrent load this is a race condition. The right fix is either a single-threaded engine with a channel-based command queue, or per-symbol `sync.RWMutex`.
+
+More fundamentally: there's no event resolution. The platform can trade positions indefinitely but can never declare a winner or distribute payouts. That's the next thing to build.

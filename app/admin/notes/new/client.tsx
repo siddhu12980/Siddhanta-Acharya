@@ -296,6 +296,7 @@ export function NewNoteClient() {
                     <button
                       key={item.title}
                       title={item.title}
+                      aria-label={item.title}
                       onClick={() => {
                         if (bodyRef.current)
                           applyWrap(bodyRef.current, item.wrap, setBody);

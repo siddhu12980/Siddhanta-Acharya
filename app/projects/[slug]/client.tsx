@@ -8,8 +8,33 @@ import { ExternalLink, Package } from "lucide-react";
 import type { ProjectFrontmatter } from "@/lib/content";
 import { Badge } from "@/components/ui/badge-custom";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ArchitectureTab } from "@/components/architecture/architecture-tab";
-import { DemoTab } from "@/components/demos/demo-tab";
+import dynamic from "next/dynamic";
+
+const ArchitectureTab = dynamic(
+  () =>
+    import("@/components/architecture/architecture-tab").then((m) => ({
+      default: m.ArchitectureTab,
+    })),
+  { ssr: false, loading: () => <DiagramSkeleton /> },
+);
+
+const DemoTab = dynamic(
+  () =>
+    import("@/components/demos/demo-tab").then((m) => ({
+      default: m.DemoTab,
+    })),
+  { ssr: false, loading: () => <DiagramSkeleton /> },
+);
+
+function DiagramSkeleton() {
+  return (
+    <div className="flex h-[420px] items-center justify-center rounded border border-app-border bg-app-panel">
+      <span className="animate-pulse font-mono text-xs text-app-text-muted">
+        Loading diagram…
+      </span>
+    </div>
+  );
+}
 
 const TABS = ["architecture", "demo", "about"] as const;
 type Tab = (typeof TABS)[number];

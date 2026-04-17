@@ -14,7 +14,7 @@
   /* Text */
   --app-text: oklch(0.18 0.01 260);
   --app-text-secondary: oklch(0.40 0.01 260);
-  --app-text-muted: oklch(0.55 0.01 260);
+  --app-text-muted: oklch(0.45 0.01 260);
 
   /* Borders */
   --app-border: oklch(0.88 0.005 260);
@@ -57,7 +57,7 @@
   /* Text */
   --app-text: oklch(0.93 0.005 260);
   --app-text-secondary: oklch(0.68 0.01 260);
-  --app-text-muted: oklch(0.50 0.01 260);
+  --app-text-muted: oklch(0.62 0.01 260);
 
   /* Borders */
   --app-border: oklch(1 0 0 / 8%);
@@ -222,6 +222,21 @@
 
 .dark .text-stroke {
   -webkit-text-stroke-color: var(--app-text);
+}
+
+/* ── Focus ring ────────────────────────────────────────────────── */
+
+/* Baseline focus ring for all keyboard-focusable elements.
+   Components that define their own focus-visible styles take precedence. */
+:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Remove outline on mouse/touch click (handled per-component) */
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* ── Scroll reveal ─────────────────────────────────────────────── */

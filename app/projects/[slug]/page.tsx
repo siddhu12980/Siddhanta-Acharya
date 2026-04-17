@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getProject, getAllProjectSlugs } from "@/lib/content";
 import { renderMDX } from "@/lib/mdx";
 import { ProjectPageClient } from "./client";
+import { SITE_URL, SITE_NAME } from "@/lib/seo";
 
 export async function generateStaticParams() {
   const slugs = await getAllProjectSlugs();
@@ -9,6 +11,33 @@ export async function generateStaticParams() {
 }
 
 export const revalidate = 3600;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const project = await getProject(slug);
+  if (!project) return {};
+  const { frontmatter } = project;
+  const url = `${SITE_URL}/projects/${slug}`;
+  return {
+    title: frontmatter.title,
+    description: frontmatter.tagline,
+    alternates: { canonical: url },
+    openGraph: {
+      url,
+      type: "article",
+      title: `${frontmatter.title} — ${SITE_NAME}`,
+      description: frontmatter.tagline,
+    },
+    twitter: {
+      title: `${frontmatter.title} — ${SITE_NAME}`,
+      description: frontmatter.tagline,
+    },
+  };
+}
 
 export default async function ProjectPage({
   params,

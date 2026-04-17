@@ -1,0 +1,44 @@
+---
+slug: redis-primitives
+title: "Redis primitives worth knowing beyond GET/SET"
+date: "2026-04-17"
+tags:
+  - redis
+  - infrastructure
+summary: "Lists and Pub/Sub turn Redis into a work queue and a message broker with almost no setup."
+---
+
+Most people reach for Redis as a cache and stop there. But I've used it in two projects now for things that have nothing to do with caching, and it keeps being the right tool.
+
+## Lists as a work queue
+
+Redis Lists are ordered sequences you can push to and pop from either end. `LPUSH` appends to the left, `BRPOP` blocks the caller until something is available on the right. That's a work queue.
+
+```
+# Producer
+LPUSH jobs '{"type":"run","code":"print(1+1)"}'
+
+# Worker (blocks until work arrives)
+BRPOP jobs 0
+```
+
+In the [Redis Queue project](/projects/redis-queue), a Node.js API receives code submissions and pushes them onto a `"problems"` list. A separate worker process sits in a `BRPOP` loop, picks up jobs one at a time, runs them with `child_process.exec`, and pushes results back onto a per-request results list.
+
+The producer and consumer are completely decoupled. Swap the worker for a different language or runtime and the API doesn't change.
+
+## Pub/Sub for fan-out
+
+`PUBLISH` sends a message to a channel. Every subscriber on that channel receives it simultaneously. Unlike a queue, messages aren't stored — if no one is listening, the message is gone.
+
+In the [WebSocket Pub/Sub project](/projects/websocket-pubsub), two Node.js servers sit behind nginx. When a client connected to server A sends a message, server A publishes it to a Redis channel. Server B is subscribed to the same channel and receives the message, then forwards it to its own connected clients.
+
+The two servers never talk to each other directly. Redis is the intermediary.
+
+One thing to know: a Redis client in subscribe mode can't issue other commands. You need two clients — one for publishing, one for subscribing. The `node-redis` v4 docs are clear about this, but it's easy to miss.
+
+## When to use which
+
+- **Lists + BRPOP**: you need workers, retries eventually matter, ordering matters, messages shouldn't be lost if no one is currently consuming.
+- **Pub/Sub**: you need fan-out, messages are ephemeral, multiple consumers need the same message at once.
+
+For anything requiring message persistence or consumer groups, Redis Streams is the better primitive. But for simpler use cases, Lists and Pub/Sub cover a lot of ground with almost no infrastructure overhead.

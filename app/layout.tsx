@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Geist } from "next/font/google";
 import { JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "@/components/shell/theme-provider";
 import { Sidebar } from "@/components/shell/sidebar";
 import { getAllProjects } from "@/lib/content";
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, TWITTER_HANDLE } from "@/lib/seo";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,8 +22,28 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Siddhant Acharya",
-  description: "Backend & distributed systems engineer",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    template: `%s — ${SITE_NAME}`,
+    default: SITE_NAME,
+  },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    creator: TWITTER_HANDLE,
+    site: TWITTER_HANDLE,
+  },
+  robots: { index: true, follow: true },
+  alternates: {
+    types: {
+      "application/rss+xml": `${SITE_URL}/feed.xml`,
+    },
+  },
 };
 
 export default async function RootLayout({
@@ -43,6 +65,26 @@ export default async function RootLayout({
           {/* Background overlays */}
           <div className="bg-grid fixed inset-0 pointer-events-none opacity-40" />
           <div className="bg-noise fixed inset-0 pointer-events-none" />
+
+          {/* JSON-LD: Person schema */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "Person",
+                name: SITE_NAME,
+                url: SITE_URL,
+                jobTitle: "Backend & Distributed Systems Engineer",
+                description: SITE_DESCRIPTION,
+                sameAs: [
+                  "https://github.com/siddhu12980",
+                  "https://linkedin.com/in/siddhanta-acharya",
+                  "https://twitter.com/siddhu12980",
+                ],
+              }),
+            }}
+          />
 
           {/* Shell */}
           <div className="relative flex min-h-screen flex-col">
@@ -80,6 +122,7 @@ export default async function RootLayout({
             </div>
           </div>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
