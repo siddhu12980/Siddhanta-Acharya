@@ -8,7 +8,8 @@ import { StatusDot } from "@/components/ui/status-dot";
 import { Badge } from "@/components/ui/badge-custom";
 import { TechIcon } from "@/components/ui/tech-icon";
 import type { ProjectFrontmatter, NoteFrontmatter } from "@/lib/content";
-import type { SkillCategory, Certificate } from "@/lib/profile";
+import type { SkillCategory } from "@/lib/profile";
+import type { Certificate } from "@/lib/certificates";
 
 // ── GitHub heatmap colors ──────────────────────────────────────
 const CONTRIB_COLORS = [
@@ -420,7 +421,7 @@ export function LandingPageClient({
       </div>
 
       {/* ── Two-column: Contact form + Certifications ──────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14">
+      <div className={`grid grid-cols-1 gap-10 lg:gap-14 ${certificates.length > 0 ? "lg:grid-cols-2" : ""}`}>
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -430,6 +431,7 @@ export function LandingPageClient({
           <ContactForm />
         </motion.div>
 
+        {certificates.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -479,6 +481,7 @@ export function LandingPageClient({
             ))}
           </div>
         </motion.div>
+        )}
       </div>
     </div>
   );

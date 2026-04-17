@@ -13,40 +13,6 @@ export const SKILLS: SkillCategory[] = [
   { category: "Frontend", items: ["React", "Next.js", "Tailwind CSS"] },
 ];
 
-export interface Certificate {
-  title: string;
-  issuer: string;
-  date: string;
-  credentialUrl?: string;
-}
-
-export const CERTIFICATES: Certificate[] = [
-  {
-    title: "AWS Certified Solutions Architect - Associate",
-    issuer: "Amazon Web Services",
-    date: "2025-11",
-    credentialUrl: "#",
-  },
-  {
-    title: "Certified Kubernetes Application Developer (CKAD)",
-    issuer: "The Linux Foundation",
-    date: "2025-08",
-    credentialUrl: "#",
-  },
-  {
-    title: "Redis University — RU101: Introduction to Redis Data Structures",
-    issuer: "Redis Inc.",
-    date: "2025-05",
-    credentialUrl: "#",
-  },
-  {
-    title: "Meta Back-End Developer Professional Certificate",
-    issuer: "Coursera / Meta",
-    date: "2024-12",
-    credentialUrl: "#",
-  },
-];
-
 // ── Mock GitHub contribution data ─────────────────────────────────
 
 export function generateContributions(): number[][] {

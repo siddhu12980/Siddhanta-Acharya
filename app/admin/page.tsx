@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { getAllNotes } from "@/lib/content";
+import { getCertificates } from "@/lib/certificates";
+import { CertificatesClient } from "./certificates-client";
 import { Plus } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const notes = await getAllNotes();
+  const [notes, certificates] = await Promise.all([
+    getAllNotes(),
+    getCertificates(),
+  ]);
 
   return (
     <div className="px-5 py-8 sm:px-8 sm:py-10 lg:px-10 max-w-[900px]">
@@ -92,6 +97,18 @@ export default async function AdminPage() {
           </p>
         </div>
       )}
+
+      {/* ── Certificates ─────────────────────────────────────── */}
+      <div className="mt-12">
+        <h2 className="text-base font-sans font-semibold text-app-text mb-1">
+          Certificates
+        </h2>
+        <p className="font-mono text-xs text-app-text-muted mb-5">
+          {certificates.length} certificate{certificates.length !== 1 ? "s" : ""} ·{" "}
+          shown on the landing page
+        </p>
+        <CertificatesClient initialCerts={certificates} />
+      </div>
     </div>
   );
 }
