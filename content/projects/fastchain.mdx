@@ -11,4 +11,80 @@ stack:
   - "FastAPI"
   - "WebSocket"
 order: 3
+architecture:
+  nodes:
+    - { id: "client", label: "Client", sub: "HTTP + WS", type: "external", x: 50, y: 180 }
+    - { id: "fastapi", label: "FastAPI", sub: "uvicorn :3005", type: "service", x: 280, y: 180 }
+    - { id: "pow", label: "PoW Engine", sub: "SHA-256 nonce loop", type: "service", x: 530, y: 180 }
+    - { id: "chain", label: "Chain", sub: "in-memory blocks", type: "datastore", x: 280, y: 360 }
+  edges:
+    - { id: "e1", from: "client", to: "fastapi", label: "WS mine + POST /txn" }
+    - { id: "e2", from: "fastapi", to: "pow", label: "run proof-of-work" }
+    - { id: "e3", from: "pow", to: "chain", label: "append block" }
+    - { id: "e4", from: "fastapi", to: "client", label: "broadcast new_block" }
+simulation:
+  buttonLabel: "Mine block"
+  counterPrefix: "miner"
+  totalDuration: 3500
+  steps:
+    - delay: 0
+      pulseNode: "client"
+      log: "[00:00.00] [client] WS connect ws://localhost:3005/ws/miner → chain received (3 blocks)"
+    - delay: 400
+      edgeId: "e1"
+      pulseNode: "fastapi"
+      log: "[00:00.12] [client] POST /txn { sender: \"{id}\", receiver: \"bob\", amount: 10 }"
+    - delay: 900
+      pulseNode: "fastapi"
+      log: "[00:00.22] [fastapi] txn queued, pending: 1 → WS: { type: \"mine\", miner: \"{id}\" }"
+    - delay: 1400
+      edgeId: "e2"
+      pulseNode: "pow"
+      log: "[00:00.30] [pow] SHA-256 nonce search, difficulty: \"00000\""
+    - delay: 2200
+      pulseNode: "pow"
+      log: "[00:00.44] [pow] nonce: 284921 found, hash: 00000a4f7b... ✓"
+    - delay: 2700
+      edgeId: "e3"
+      pulseNode: "chain"
+      log: "[00:00.52] [chain] block #4 appended, merkle root computed, pending cleared"
+    - delay: 3100
+      edgeId: "e4"
+      pulseNode: "client"
+      log: "[00:00.58] [fastapi] BROADCAST new_block → all connected miners notified"
 ---
+
+FastChain is a from-scratch blockchain implementation in Python — no
+libraries, no shortcuts. Every primitive is hand-rolled: SHA-256
+proof-of-work, a Merkle tree for transaction integrity, a longest-chain
+conflict resolution rule, and WebSocket-based peer sync so multiple
+"miners" stay in sync through a shared FastAPI server.
+
+## What's interesting
+
+Proof-of-work runs on the server side, which is unusual. When a miner sends
+a `{"type": "mine"}` message over WebSocket, the FastAPI server itself
+performs the SHA-256 nonce search — incrementing from zero until the hash
+starts with `"00000"` (five leading hex zeros, roughly one million hash
+attempts on average). Once a valid block is found, the server broadcasts
+`{"type": "new_block"}` to every connected miner, who can then validate
+and append it to their local view of the chain.
+
+The Merkle tree implementation is worth examining: transactions are
+individually hashed, then paired and combined up the tree until a single
+root hash remains. This root is stored in the block header, making it
+impossible to tamper with any transaction without invalidating both the
+Merkle root and the block's proof-of-work hash.
+
+The `/hack` endpoint is deliberately left in — it corrupts a random
+block's hash to let you watch `is_chain_valid()` catch the tampering in
+real time. It is a better demo than any contrived example.
+
+## What I'd do differently
+
+Mining happens server-side with an `asyncio.Lock`, which serializes all
+mining requests. In a real network, each node would mine independently and
+race to broadcast first. I'd also add transaction signatures — the current
+`signature: ""` placeholder means anyone can forge a transaction from any
+address. And the balance computation does a full chain scan on every
+validation step; a UTXO set would make that O(1) instead of O(n·m).

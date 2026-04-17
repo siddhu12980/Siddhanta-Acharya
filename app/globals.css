@@ -247,3 +247,72 @@
 .react-flow__attribution {
   display: none !important;
 }
+
+/* ── Admin preview prose ───────────────────────────────────────── */
+
+.prose-admin {
+  font-family: var(--font-geist-sans, sans-serif);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--app-text-secondary);
+}
+
+.prose-admin h1,
+.prose-admin h2,
+.prose-admin h3,
+.prose-admin h4 {
+  color: var(--app-text);
+  font-weight: 600;
+  margin-top: 1.4em;
+  margin-bottom: 0.4em;
+}
+
+.prose-admin h2 { font-size: 1.1rem; }
+.prose-admin h3 { font-size: 1rem; }
+
+.prose-admin p { margin-bottom: 0.9em; }
+
+.prose-admin a { color: var(--app-accent); text-decoration: underline; }
+
+.prose-admin code {
+  font-family: var(--font-jetbrains-mono, monospace);
+  font-size: 0.8em;
+  background: var(--app-hover);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+}
+
+.prose-admin pre {
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  padding: 1em;
+  overflow-x: auto;
+  margin-bottom: 1em;
+}
+
+.prose-admin pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 0.82rem;
+}
+
+.prose-admin blockquote {
+  border-left: 3px solid var(--app-accent);
+  padding-left: 1em;
+  color: var(--app-text-muted);
+  margin: 0.8em 0;
+}
+
+.prose-admin ul { list-style: disc; padding-left: 1.4em; margin-bottom: 0.9em; }
+.prose-admin ol { list-style: decimal; padding-left: 1.4em; margin-bottom: 0.9em; }
+.prose-admin li { margin-bottom: 0.25em; }
+
+.prose-admin hr {
+  border: none;
+  border-top: 1px solid var(--app-border);
+  margin: 1.5em 0;
+}
+
+.prose-admin strong { color: var(--app-text); font-weight: 600; }
+.prose-admin em { font-style: italic; }

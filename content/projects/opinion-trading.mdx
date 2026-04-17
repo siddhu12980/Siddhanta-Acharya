@@ -8,5 +8,90 @@ repo: "https://github.com/siddhu12980/Opinion_trading_v1"
 liveUrl: null
 stack:
   - "TypeScript"
+  - "Go"
+  - "Redis"
 order: 4
+architecture:
+  nodes:
+    - { id: "client", label: "Client", sub: "React + WS", type: "external", x: 50, y: 200 }
+    - { id: "api-gw", label: "API Gateway", sub: "Express :3000", type: "service", x: 260, y: 120 }
+    - { id: "redis", label: "Redis", sub: "req queue + pub/sub", type: "datastore", x: 470, y: 200 }
+    - { id: "engine", label: "Go Engine", sub: "order matcher", type: "service", x: 680, y: 120 }
+    - { id: "ws", label: "WS Server", sub: "orderbook feeds", type: "service", x: 680, y: 280 }
+  edges:
+    - { id: "e1", from: "client", to: "api-gw", label: "POST /order/buy" }
+    - { id: "e2", from: "api-gw", to: "redis", label: "LPUSH \"req\"" }
+    - { id: "e3", from: "redis", to: "engine", label: "BRPOP \"req\"" }
+    - { id: "e4", from: "engine", to: "redis", label: "PUBLISH result + orderbook" }
+    - { id: "e5", from: "redis", to: "ws", label: "fan-out orderbook" }
+    - { id: "e6", from: "ws", to: "client", label: "live WS feed" }
+simulation:
+  buttonLabel: "Place order"
+  counterPrefix: "ord"
+  totalDuration: 3500
+  steps:
+    - delay: 0
+      pulseNode: "client"
+      log: "[00:00.00] [client] POST /order/buy { symbol: \"BTC_YES\", price: 850, qty: 5 }"
+    - delay: 400
+      edgeId: "e1"
+      pulseNode: "api-gw"
+      log: "[00:00.12] [api-gw] req {id} → LPUSH \"req\", SUBSCRIBE \"{id}\""
+    - delay: 900
+      edgeId: "e2"
+      pulseNode: "redis"
+      log: "[00:00.22] [redis] LPUSH \"req\" → queue depth: 1"
+    - delay: 1400
+      edgeId: "e3"
+      pulseNode: "engine"
+      log: "[00:00.30] [go-engine] BRPOP \"req\" → worker goroutine dispatched"
+    - delay: 2000
+      pulseNode: "engine"
+      log: "[00:00.40] [go-engine] buy YES@850 matched → inverse order NO@150 created, locked: ₹4250"
+    - delay: 2600
+      edgeId: "e4"
+      pulseNode: "redis"
+      log: "[00:00.50] [go-engine] PUBLISH \"{id}\": ok + PUBLISH \"BTC_YES\": orderbook"
+    - delay: 3100
+      edgeId: "e5"
+      pulseNode: "ws"
+      log: "[00:00.58] [ws-server] orderbook fan-out → all BTC_YES subscribers notified"
 ---
+
+Opinion Trading is a prediction market platform modeled after Probo — users
+bet on real-world events by trading YES and NO outcome tokens, with prices
+reflecting the market's probability estimate. The core is a custom
+order-book matching engine written in Go, backed by a Redis queue for async
+request routing and a WebSocket service for live orderbook feeds.
+
+## What's interesting
+
+The request flow is a synchronous RPC pattern built entirely on Redis. The
+Express API gateway serializes each order into a JSON message, pushes it
+onto the `"req"` list via `LPUSH`, then blocks waiting for a response on a
+unique per-request pub/sub channel. The Go engine pops from `"req"` via
+`BRPOP`, runs the matching logic in a worker goroutine, and publishes the
+result back. This decouples the API layer from the engine completely — swap
+Go for Rust tomorrow and nothing in the gateway changes.
+
+The matching logic itself handles a subtle prediction market problem: what
+do you do when there is no counterparty? Instead of leaving the order
+unfilled, the engine creates an **inverse order** on the opposite side of
+the book at the complementary price (YES@850 → inverse on NO@150). When
+that inverse order matches later, both sides receive freshly minted tokens
+rather than transferring existing stock. This means trading can happen
+without any pre-existing supply — the market bootstraps its own liquidity.
+
+The system originally started as a TypeScript engine (still in `engine/`)
+before being rewritten in Go for better concurrency. Both implementations
+exist in the repo side by side.
+
+## What I'd do differently
+
+The Go engine stores all state — order books, balances, positions — in
+in-memory maps accessed by 10 goroutines with no mutex protection. This
+is a race condition waiting to manifest under load. I'd add `sync.RWMutex`
+per symbol, or restructure to a single-threaded engine with a channel-based
+command queue. I'd also address the more fundamental gap: there is no event
+resolution mechanism. The platform can trade positions but cannot settle
+them — declaring a winner and distributing payouts was never built.

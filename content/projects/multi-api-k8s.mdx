@@ -1,7 +1,7 @@
 ---
 slug: multi-api-k8s
 title: "Multi-API on K8s"
-tagline: "Auth + users + tasks services on Amazon EKS"
+tagline: "Auth + users + tasks microservices on Amazon EKS"
 category: "Infrastructure"
 status: "offline"
 repo: "https://github.com/siddhu12980/Multi-api-kub-config"
@@ -11,4 +11,84 @@ stack:
   - "Kubernetes"
   - "Docker"
 order: 5
+architecture:
+  nodes:
+    - { id: "client", label: "Client", sub: "HTTP", type: "external", x: 50, y: 200 }
+    - { id: "users", label: "Users API", sub: "LB :80 / 2 replicas", type: "service", x: 270, y: 100 }
+    - { id: "tasks", label: "Tasks API", sub: "LB :80 / 2 replicas", type: "service", x: 270, y: 300 }
+    - { id: "auth", label: "Auth Service", sub: "ClusterIP :3000", type: "service", x: 510, y: 200 }
+  edges:
+    - { id: "e1", from: "client", to: "users", label: "POST /signup /login" }
+    - { id: "e2", from: "client", to: "tasks", label: "GET/POST /tasks" }
+    - { id: "e3", from: "users", to: "auth", label: "/hashed-pw + /token" }
+    - { id: "e4", from: "tasks", to: "auth", label: "/verify-token" }
+simulation:
+  buttonLabel: "Sign up + create task"
+  counterPrefix: "dev"
+  totalDuration: 3500
+  steps:
+    - delay: 0
+      pulseNode: "client"
+      log: "[00:00.00] [client] POST /signup { email: \"{id}@example.com\" } → users-service ELB"
+    - delay: 400
+      edgeId: "e1"
+      pulseNode: "users"
+      log: "[00:00.12] [users-api] validate → GET auth-service.default:3000/hashed-pw/..."
+    - delay: 900
+      edgeId: "e3"
+      pulseNode: "auth"
+      log: "[00:00.22] [auth] bcrypt hash (12 rounds) → hash returned via K8s DNS"
+    - delay: 1400
+      pulseNode: "users"
+      log: "[00:00.30] [users-api] save to MongoDB Atlas + write EFS log → 201 OK"
+    - delay: 1900
+      pulseNode: "client"
+      log: "[00:00.38] [client] POST /login → POST auth-service.default:3000/token"
+    - delay: 2500
+      edgeId: "e3"
+      pulseNode: "auth"
+      log: "[00:00.50] [auth] verify hash + sign JWT → token issued"
+    - delay: 3100
+      edgeId: "e2"
+      pulseNode: "tasks"
+      log: "[00:00.58] [tasks-api] POST /verify-token → auth OK, task created"
 ---
+
+Three Node.js microservices deployed to Amazon EKS: an auth service that
+handles password hashing and JWT issuance, a users service for signup and
+login, and a tasks service for CRUD operations protected by JWT. The
+infrastructure is defined in Kubernetes manifests using EFS-backed
+persistent storage and AWS load balancers for external access.
+
+## What's interesting
+
+The auth service is deliberately stateless — it has no database. Its only
+jobs are hashing passwords with bcrypt and signing/verifying JWTs. Both
+the users and tasks services call it over HTTP via Kubernetes internal DNS
+(`auth-service.default:3000`), which resolves to the ClusterIP without
+leaving the cluster. This makes the auth service a shared primitive: any
+new service in the cluster can verify tokens by hitting the same endpoint,
+with no shared secret distribution problem.
+
+The users service writes a signup log to an Amazon EFS (Elastic File
+System) volume mounted at `/app/users/users-log.txt`. Because EFS supports
+`ReadWriteMany`, both user-service replicas share the same file — something
+you cannot do with a standard EBS volume. This is a small but concrete
+demonstration of when shared file storage is the right primitive over a
+database.
+
+The Kubernetes manifests wire up three deployments (1 auth replica, 2
+each for users and tasks), two external load balancers, and the EFS CSI
+driver configuration including the PersistentVolume with the real filesystem
+ID from the original EKS cluster.
+
+## What I'd do differently
+
+The JWT payload is empty — `jwt.sign({}, key)` — which means the token
+proves authentication happened but carries no identity. When the tasks
+service calls `/verify-token`, it cannot tell which user the token belongs
+to, so task ownership checks silently fail. A real implementation would
+embed at minimum a `userId` claim. I'd also move the credentials (MongoDB
+connection string, JWT signing key) out of the manifest files and into
+Kubernetes Secrets, and add liveness and readiness probes so EKS can
+actually detect and restart unhealthy pods.
