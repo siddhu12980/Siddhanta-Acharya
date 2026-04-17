@@ -10,6 +10,7 @@ import { TechIcon } from "@/components/ui/tech-icon";
 import type { ProjectFrontmatter, NoteFrontmatter } from "@/lib/content";
 import type { SkillCategory } from "@/lib/profile";
 import type { Certificate } from "@/lib/certificates";
+import type { GitHubStats } from "@/lib/github";
 
 // ── GitHub heatmap colors ──────────────────────────────────────
 const CONTRIB_COLORS = [
@@ -179,6 +180,7 @@ interface LandingPageClientProps {
   skills: SkillCategory[];
   certificates: Certificate[];
   contributions: number[][];
+  githubStats: GitHubStats;
 }
 
 export function LandingPageClient({
@@ -187,6 +189,7 @@ export function LandingPageClient({
   skills,
   certificates,
   contributions,
+  githubStats,
 }: LandingPageClientProps) {
   return (
     <div className="px-5 py-10 sm:px-8 sm:py-14 lg:px-12 lg:py-16">
@@ -216,10 +219,11 @@ export function LandingPageClient({
         className="max-w-lg mb-10 sm:mb-16"
       >
         <p className="text-sm sm:text-base leading-relaxed text-app-text-secondary">
-          I build backend systems that stay up. Job queues, pub/sub pipelines,
-          order-matching engines — the kind of infrastructure that runs in the
-          background while users see a button and a spinner. Currently looking
-          for backend and infrastructure roles, remote or in Bangalore.
+          Full-stack developer who keeps getting pulled toward the backend.
+          I like building things that actually scale — queues, pipelines,
+          distributed state — and understanding why they break under load.
+          Learning fast, shipping real code and writing
+          about what I pick up along the way.
         </p>
 
         <div className="mt-5 sm:mt-6 flex flex-wrap gap-3">
@@ -399,10 +403,10 @@ export function LandingPageClient({
           {/* GitHub stats */}
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: "Repos", value: "28" },
-              { label: "Stars", value: "64" },
-              { label: "Commits (yr)", value: "847" },
-              { label: "PRs merged", value: "132" },
+              { label: "Repos", value: String(githubStats.repos) },
+              { label: "Stars", value: String(githubStats.stars) },
+              { label: "Commits (yr)", value: String(githubStats.commitsThisYear) },
+              { label: "PRs merged", value: String(githubStats.prsMerged) },
             ].map((stat) => (
               <div
                 key={stat.label}

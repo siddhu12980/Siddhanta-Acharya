@@ -79,8 +79,8 @@ export default async function RootLayout({
                 description: SITE_DESCRIPTION,
                 sameAs: [
                   "https://github.com/siddhu12980",
-                  "https://linkedin.com/in/siddhanta-acharya",
-                  "https://twitter.com/siddhu12980",
+                  "https://www.linkedin.com/in/siddhanta-acharya-1a2592284/",
+                  "https://x.com/AchSiddhanta",
                 ],
               }),
             }}
@@ -109,7 +109,7 @@ export default async function RootLayout({
                       <span className="text-app-text-muted">·</span>
                       <a href="https://linkedin.com/in/siddhanta-acharya" target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-app-text-muted transition-colors hover:text-app-accent">LinkedIn</a>
                       <span className="text-app-text-muted">·</span>
-                      <a href="https://twitter.com/siddhu12980" target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-app-text-muted transition-colors hover:text-app-accent">Twitter</a>
+                      <a href="https://x.com/AchSiddhanta" target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-app-text-muted transition-colors hover:text-app-accent">Twitter</a>
                       <span className="text-app-text-muted">·</span>
                       <a href="mailto:dipendrabhatta.gdscfetju@gmail.com" className="font-mono text-xs text-app-text-muted transition-colors hover:text-app-accent">Email</a>
                     </div>

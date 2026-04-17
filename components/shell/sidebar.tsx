@@ -84,7 +84,7 @@ function SidebarContent({
             Siddhant Acharya
           </h1>
           <p className="mt-0.5 font-mono text-[10px] uppercase tracking-widest text-app-text-muted">
-            Backend &amp; distributed systems
+            Full-stack · scalable systems
           </p>
         </Link>
 
@@ -182,7 +182,7 @@ function SidebarContent({
       {/* Footer */}
       <div className="flex items-center justify-between px-5 py-4">
         <p className="font-mono text-[10px] leading-relaxed text-app-text-muted">
-          Looking for backend / infra roles
+          Available for fullstack / backend roles
           <br />
           Remote or Bangalore
         </p>
