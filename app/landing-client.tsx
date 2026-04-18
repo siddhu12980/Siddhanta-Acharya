@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { ArrowRight, ExternalLink, Award, Send } from "lucide-react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { ArrowRight, ExternalLink, Award, Send, Download, GraduationCap } from "lucide-react";
+import { RESUME_URL } from "@/lib/seo";
 import { StatusDot } from "@/components/ui/status-dot";
 import { Badge } from "@/components/ui/badge-custom";
 import { TechIcon } from "@/components/ui/tech-icon";
@@ -11,6 +12,8 @@ import type { ProjectFrontmatter, NoteFrontmatter } from "@/lib/content";
 import type { SkillCategory } from "@/lib/profile";
 import type { Certificate } from "@/lib/certificates";
 import type { GitHubStats } from "@/lib/github";
+import type { WorkExperience } from "@/lib/experience";
+import type { Education } from "@/lib/education";
 
 // ── GitHub heatmap colors ──────────────────────────────────────
 const CONTRIB_COLORS = [
@@ -81,18 +84,30 @@ function ContactForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
-  const [sent, setSent] = useState(false);
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const subject = encodeURIComponent(`Portfolio contact from ${name}`);
-    const body = encodeURIComponent(`From: ${name} (${email})\n\n${message}`);
-    window.open(
-      `mailto:dipendrabhatta.gdscfetju@gmail.com?subject=${subject}&body=${body}`,
-      "_self",
-    );
-    setSent(true);
-    setTimeout(() => setSent(false), 3000);
+    setStatus("sending");
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, message }),
+      });
+
+      if (!res.ok) throw new Error();
+
+      setStatus("sent");
+      setName("");
+      setEmail("");
+      setMessage("");
+      setTimeout(() => setStatus("idle"), 4000);
+    } catch {
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 4000);
+    }
   };
 
   return (
@@ -160,13 +175,170 @@ function ContactForm() {
         </div>
         <button
           type="submit"
-          className="inline-flex items-center gap-2 rounded-sm bg-app-solid px-4 py-2 font-mono text-xs uppercase tracking-widest text-app-solid-text transition-colors hover:bg-app-accent"
+          disabled={status === "sending" || status === "sent"}
+          className="inline-flex items-center gap-2 rounded-sm bg-app-solid px-4 py-2 font-mono text-xs uppercase tracking-widest text-app-solid-text transition-colors hover:bg-app-accent disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <Send className="size-3" />
-          {sent ? "Opening mail client..." : "Send message"}
+          {status === "sending" && "Sending..."}
+          {status === "sent" && "Message sent!"}
+          {status === "error" && "Failed — try again"}
+          {status === "idle" && "Send message"}
         </button>
       </form>
     </div>
+  );
+}
+
+function ExperienceTimeline({ experience }: { experience: WorkExperience[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start 0.85", "end 0.35"],
+  });
+  const lineScaleY = useTransform(scrollYProgress, [0, 1], [0, 1]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.05 }}
+      transition={{ duration: 0.4 }}
+      className="mb-14 sm:mb-20"
+    >
+      <p className="font-mono text-[10px] uppercase tracking-widest text-app-text-muted mb-8">
+        Experience
+      </p>
+
+      <div ref={containerRef} className="relative pl-7">
+        {/* Static background rail */}
+        <div className="absolute left-[6px] top-2 bottom-2 w-px bg-app-border" />
+
+        {/* Scroll-tied progress line */}
+        <motion.div
+          className="absolute left-[6px] top-2 bottom-2 w-px bg-gradient-to-b from-app-accent via-app-accent/80 to-app-accent/20"
+          style={{ scaleY: lineScaleY, transformOrigin: "top" }}
+        />
+
+        <div className="space-y-10">
+          {experience.map((job, i) => (
+            <TimelineEntry
+              key={job.company}
+              job={job}
+              index={i}
+              scrollYProgress={scrollYProgress}
+              total={experience.length}
+            />
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function TimelineEntry({
+  job,
+  index,
+  scrollYProgress,
+  total,
+}: {
+  job: WorkExperience;
+  index: number;
+  scrollYProgress: ReturnType<typeof useScroll>["scrollYProgress"];
+  total: number;
+}) {
+  // Each dot "activates" when the scroll progress passes its position
+  const activationPoint = total > 1 ? index / (total - 1) : 0;
+  const windowStart = Math.max(0, activationPoint - 0.08);
+  const windowEnd = Math.min(1, activationPoint + 0.04);
+
+  const dotScale = useTransform(
+    scrollYProgress,
+    [windowStart, windowEnd],
+    [1, 1.35],
+  );
+  const innerScale = useTransform(
+    scrollYProgress,
+    [windowStart, windowEnd],
+    [0.5, 1],
+  );
+  const glowOpacity = useTransform(
+    scrollYProgress,
+    [windowStart, windowEnd],
+    [0, 0.5],
+  );
+  const glowScale = useTransform(
+    scrollYProgress,
+    [windowStart, windowEnd],
+    [1, 2.2],
+  );
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.5, delay: index * 0.08 }}
+      className="relative"
+    >
+      {/* Glow halo (behind dot) */}
+      <motion.div
+        className="absolute -left-7 top-1 size-[13px] rounded-full bg-app-accent blur-md pointer-events-none"
+        style={{ opacity: glowOpacity, scale: glowScale }}
+      />
+      {/* Timeline dot */}
+      <motion.div
+        className="absolute -left-7 top-1 size-[13px] rounded-full border border-app-accent bg-app-bg flex items-center justify-center"
+        style={{ scale: dotScale }}
+      >
+        <motion.div
+          className="size-[5px] rounded-full bg-app-accent"
+          style={{ scale: innerScale }}
+        />
+      </motion.div>
+
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-0.5">
+        <p className="text-sm font-sans text-app-text">{job.role}</p>
+        <span className="shrink-0 font-mono text-[10px] text-app-text-muted pt-0.5">
+          {job.period}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <p className="font-mono text-[10px] uppercase tracking-widest text-app-accent/70">
+          {job.company}
+        </p>
+        {job.location && (
+          <>
+            <span className="font-mono text-[10px] text-app-text-muted">·</span>
+            <span className="font-mono text-[10px] text-app-text-muted">
+              {job.location}
+            </span>
+          </>
+        )}
+      </div>
+
+      <ul className="space-y-2">
+        {job.highlights.map((h) => (
+          <li
+            key={h}
+            className="flex items-start gap-2 text-xs text-app-text-muted leading-relaxed"
+          >
+            <span className="mt-[7px] size-1 shrink-0 rounded-full bg-app-border" />
+            {h}
+          </li>
+        ))}
+      </ul>
+
+      {job.stack && (
+        <div className="flex flex-wrap gap-1 mt-3">
+          {job.stack.map((tech) => (
+            <Badge key={tech} variant="muted">
+              {tech}
+            </Badge>
+          ))}
+        </div>
+      )}
+    </motion.div>
   );
 }
 
@@ -181,6 +353,8 @@ interface LandingPageClientProps {
   certificates: Certificate[];
   contributions: number[][];
   githubStats: GitHubStats;
+  experience: WorkExperience[];
+  education: Education[];
 }
 
 export function LandingPageClient({
@@ -190,6 +364,8 @@ export function LandingPageClient({
   certificates,
   contributions,
   githubStats,
+  experience,
+  education,
 }: LandingPageClientProps) {
   return (
     <div className="px-5 py-10 sm:px-8 sm:py-14 lg:px-12 lg:py-16">
@@ -240,6 +416,15 @@ export function LandingPageClient({
           >
             Read notes
           </Link>
+          <a
+            href={RESUME_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-sm border border-app-border px-3 py-1.5 font-mono text-xs uppercase tracking-widest text-app-text-secondary transition-colors hover:border-app-accent/40 hover:text-app-accent"
+          >
+            <Download className="size-3" />
+            Download resume
+          </a>
         </div>
       </motion.div>
 
@@ -321,6 +506,74 @@ export function LandingPageClient({
           ))}
         </div>
       </motion.div>
+
+      {/* ── Work experience (timeline) ───────────────────────── */}
+      {experience.length > 0 && <ExperienceTimeline experience={experience} />}
+
+      {/* ── Education ────────────────────────────────────────── */}
+      {education.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.1 }}
+          transition={{ duration: 0.4 }}
+          className="mb-14 sm:mb-20"
+        >
+          <p className="font-mono text-[10px] uppercase tracking-widest text-app-text-muted mb-5">
+            Education
+          </p>
+
+          <div className="space-y-3">
+            {education.map((ed) => (
+              <div
+                key={ed.institution}
+                className="group flex items-start gap-3 rounded-sm border border-app-border bg-app-panel p-4 transition-colors hover:border-app-accent/30 hover:bg-app-hover"
+              >
+                <GraduationCap
+                  className="size-4 shrink-0 text-app-accent mt-0.5"
+                  strokeWidth={1.5}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <p className="text-sm font-sans text-app-text">{ed.degree}</p>
+                    <span className="shrink-0 font-mono text-[10px] text-app-text-muted pt-0.5">
+                      {ed.period}
+                    </span>
+                  </div>
+
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-app-accent/70">
+                      {ed.institution}
+                    </span>
+                    <span className="font-mono text-[10px] text-app-text-muted">·</span>
+                    <span className="font-mono text-[10px] text-app-text-muted">
+                      {ed.location}
+                    </span>
+                    {ed.sgpa && (
+                      <>
+                        <span className="font-mono text-[10px] text-app-text-muted">·</span>
+                        <span className="font-mono text-[10px] text-app-text-muted">
+                          SGPA {ed.sgpa}
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {ed.coursework && ed.coursework.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {ed.coursework.map((course) => (
+                        <Badge key={course} variant="muted">
+                          {course}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* ── Two-column: Recent notes (left) + GitHub (right) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 mb-14 sm:mb-20">

@@ -10,7 +10,6 @@ export async function generateStaticParams() {
   return slugs.map((slug) => ({ slug }));
 }
 
-export const revalidate = 3600;
 
 export async function generateMetadata({
   params,

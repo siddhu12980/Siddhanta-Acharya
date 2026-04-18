@@ -8,8 +8,8 @@ export interface SkillCategory {
 export const SKILLS: SkillCategory[] = [
   { category: "Languages", items: ["TypeScript", "JavaScript", "Python", "Go", "SQL"] },
   { category: "Backend", items: ["Node.js", "Express", "FastAPI", "GraphQL"] },
-  { category: "Infrastructure", items: ["Docker", "Kubernetes", "AWS", "Nginx", "GitHub Actions"] },
-  { category: "Data & Messaging", items: ["Redis", "PostgreSQL", "MongoDB", "WebSockets", "Kafka"] },
+  { category: "Infrastructure", items: ["Docker", "Kubernetes", "AWS", "Cloudflare Workers", "Nginx", "GitHub Actions"] },
+  { category: "Data & Messaging", items: ["Redis", "PostgreSQL", "MongoDB", "MySQL", "WebSockets", "Kafka"] },
   { category: "Frontend", items: ["React", "Next.js", "Tailwind CSS"] },
 ];
 

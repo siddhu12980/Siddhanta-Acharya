@@ -2,7 +2,8 @@ import Link from "next/link";
 import { getAllNotes } from "@/lib/content";
 import { getCertificates } from "@/lib/certificates";
 import { CertificatesClient } from "./certificates-client";
-import { Plus } from "lucide-react";
+import { logout } from "./logout";
+import { Plus, LogOut } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -25,13 +26,24 @@ export default async function AdminPage() {
           </p>
         </div>
 
-        <Link
-          href="/admin/notes/new"
-          className="inline-flex items-center gap-1.5 rounded border border-app-accent bg-app-accent px-4 py-1.5 font-mono text-xs text-app-bg transition-opacity hover:opacity-80"
-        >
-          <Plus className="size-3" />
-          New note
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/notes/new"
+            className="inline-flex items-center gap-1.5 rounded border border-app-accent bg-app-accent px-4 py-1.5 font-mono text-xs text-app-bg transition-opacity hover:opacity-80"
+          >
+            <Plus className="size-3" />
+            New note
+          </Link>
+          <form action={logout}>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-1.5 rounded border border-app-border px-3 py-1.5 font-mono text-xs text-app-text-muted transition-colors hover:text-app-text"
+            >
+              <LogOut className="size-3" />
+              Sign out
+            </button>
+          </form>
+        </div>
       </div>
 
       {notes.length > 0 ? (

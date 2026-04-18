@@ -3,7 +3,6 @@ import { getAllNotes } from "@/lib/content";
 import { NotesIndexClient } from "./client";
 import { SITE_URL } from "@/lib/seo";
 
-export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Notes",
