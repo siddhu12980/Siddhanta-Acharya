@@ -44,3 +44,10 @@ next-env.d.ts
 .agents
 .vscode
 .claude
+
+# internal / AI tooling
+AGENTS.md
+CLAUDE.md
+design-system.md
+project.md
+skills-lock.json
